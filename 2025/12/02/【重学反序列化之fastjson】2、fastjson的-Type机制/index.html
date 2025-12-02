@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang=zh>
+<head>
+    <!-- so meta -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="HandheldFriendly" content="True">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+    <meta name="description" content="0.目标 理解Fastjson的Autotype机制 观察@type字段如何被Fastjson利用来加载并实例化任意指定类。  1.代码为了掩饰@type的作用，我们需要一个接口和它的实现类。 接口定义（Animal.java）12345package com.zhuangjiewei.two;public interface Animal &#123;    void say();&#125;">
+<meta property="og:type" content="article">
+<meta property="og:title" content="【重学反序列化之fastjson】2、fastjson的@Type机制">
+<meta property="og:url" content="http://example.com/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/index.html">
+<meta property="og:site_name" content="庄杰伟的个人博客">
+<meta property="og:description" content="0.目标 理解Fastjson的Autotype机制 观察@type字段如何被Fastjson利用来加载并实例化任意指定类。  1.代码为了掩饰@type的作用，我们需要一个接口和它的实现类。 接口定义（Animal.java）12345package com.zhuangjiewei.two;public interface Animal &#123;    void say();&#125;">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/2025-12-02-23-53-49.png">
+<meta property="article:published_time" content="2025-12-02T15:23:16.000Z">
+<meta property="article:modified_time" content="2025-12-02T16:02:28.906Z">
+<meta property="article:author" content="庄杰伟">
+<meta property="article:tag" content="fastjson">
+<meta property="article:tag" content="反序列化">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/2025-12-02-23-53-49.png">
+    
+    
+      
+        
+          <link rel="shortcut icon" href="/images/favicon.ico">
+        
+      
+      
+        
+          <link rel="icon" type="image/png" href="/images/favicon-192x192.png" sizes="192x192">
+        
+      
+      
+        
+          <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+        
+      
+    
+    <!-- title -->
+    <title>【重学反序列化之fastjson】2、fastjson的@Type机制</title>
+    <!-- async scripts -->
+    <!-- Google Analytics -->
+
+
+    <!-- Umami Analytics -->
+
+
+    <!-- styles -->
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    <!-- persian styles -->
+    
+    <!-- rss -->
+    
+    
+	<!-- mathjax -->
+	
+<meta name="generator" content="Hexo 8.1.1"></head>
+
+<body class="max-width mx-auto px3 ltr">
+    
+      <div id="header-post">
+  <a id="menu-icon" href="#" aria-label="Menu"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="menu-icon-tablet" href="#" aria-label="Menu"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="top-icon-tablet" href="#" aria-label="Top" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fa-solid fa-chevron-up fa-lg"></i></a>
+  <span id="menu">
+    <span id="nav">
+      <ul>
+        <!--
+       --><li><a href="/">Home</a></li><!--
+     --><!--
+       --><li><a href="/about/">About</a></li><!--
+     --><!--
+       --><li><a href="/archives/">Writing</a></li><!--
+     --><!--
+       --><li><a target="_blank" rel="noopener" href="https://github.com/Jerry-zhuang">Projects</a></li><!--
+     -->
+      </ul>
+    </span>
+    <br/>
+    <span id="actions">
+      <ul>
+        
+        
+        <li><a class="icon" aria-label="Next post" href="/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%911%E3%80%81fastjson%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E8%BF%87%E7%A8%8B%E9%83%BD%E5%B9%B2%E4%BA%86%E4%BB%80%E4%B9%88%EF%BC%9F/"><i class="fa-solid fa-chevron-right" aria-hidden="true" onmouseover="$('#i-next').toggle();" onmouseout="$('#i-next').toggle();"></i></a></li>
+        
+        <li><a class="icon" aria-label="Back to top" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i></a></li>
+        <li><a class="icon" aria-label="Share post" href="#"><i class="fa-solid fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i></a></li>
+      </ul>
+      <span id="i-prev" class="info" style="display:none;">Previous post</span>
+      <span id="i-next" class="info" style="display:none;">Next post</span>
+      <span id="i-top" class="info" style="display:none;">Back to top</span>
+      <span id="i-share" class="info" style="display:none;">Share post</span>
+    </span>
+    <br/>
+    <div id="share" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=http://example.com/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/"><i class="fab fa-facebook " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=http://example.com/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/&text=【重学反序列化之fastjson】2、fastjson的@Type机制"><i class="fab fa-twitter " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=http://example.com/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/&title=【重学反序列化之fastjson】2、fastjson的@Type机制"><i class="fab fa-linkedin " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=http://example.com/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/&is_video=false&description=【重学反序列化之fastjson】2、fastjson的@Type机制"><i class="fab fa-pinterest " aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=【重学反序列化之fastjson】2、fastjson的@Type机制&body=Check out this article: http://example.com/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/"><i class="fa-solid fa-envelope " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=http://example.com/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/&title=【重学反序列化之fastjson】2、fastjson的@Type机制"><i class="fab fa-get-pocket " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=http://example.com/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/&title=【重学反序列化之fastjson】2、fastjson的@Type机制"><i class="fab fa-reddit " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=http://example.com/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/&title=【重学反序列化之fastjson】2、fastjson的@Type机制"><i class="fab fa-stumbleupon " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=http://example.com/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/&title=【重学反序列化之fastjson】2、fastjson的@Type机制"><i class="fab fa-digg " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=http://example.com/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/&name=【重学反序列化之fastjson】2、fastjson的@Type机制&description="><i class="fab fa-tumblr " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=http://example.com/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/&t=【重学反序列化之fastjson】2、fastjson的@Type机制"><i class="fab fa-hacker-news " aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+    
+    
+      <div id="toc">
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0-%E7%9B%AE%E6%A0%87"><span class="toc-number">1.</span> <span class="toc-text">0.目标</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E4%BB%A3%E7%A0%81"><span class="toc-number">2.</span> <span class="toc-text">1.代码</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8E%A5%E5%8F%A3%E5%AE%9A%E4%B9%89%EF%BC%88Animal-java%EF%BC%89"><span class="toc-number">2.1.</span> <span class="toc-text">接口定义（Animal.java）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E7%B1%BB%EF%BC%88Cat-java%EF%BC%89"><span class="toc-number">2.2.</span> <span class="toc-text">实现类（Cat.java）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%BB%E7%A8%8B%E5%BA%8F%EF%BC%88Main-java%EF%BC%89"><span class="toc-number">2.3.</span> <span class="toc-text">主程序（Main.java）</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E8%BE%93%E5%87%BA%E5%92%8C%E8%A7%82%E5%AF%9F"><span class="toc-number">3.</span> <span class="toc-text">2.输出和观察</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A7%82%E5%AF%9F%E7%82%B91%EF%BC%9A-%E5%BA%8F%E5%88%97%E5%8C%96%E7%94%9F%E6%88%90%E7%9A%84JSON"><span class="toc-number">3.1.</span> <span class="toc-text">观察点1： 序列化生成的JSON</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A7%82%E5%AF%9F%E7%82%B92-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E7%9A%84%E6%89%A7%E8%A1%8C%E6%B5%81%E7%A8%8B"><span class="toc-number">3.2.</span> <span class="toc-text">观察点2: 反序列化的执行流程</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E6%80%BB%E7%BB%93"><span class="toc-number">4.</span> <span class="toc-text">3.总结</span></a></li></ol>
+      </div>
+    
+  </span>
+</div>
+
+    
+    <div class="content index py4 ">
+        
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header>
+    
+    <h1 class="posttitle p-name" itemprop="name headline">
+        【重学反序列化之fastjson】2、fastjson的@Type机制
+    </h1>
+
+
+
+    <div class="meta">
+      <span class="author p-author h-card" itemprop="author" itemscope itemtype="http://schema.org/Person">
+        <span class="p-name" itemprop="name">庄杰伟</span>
+      </span>
+      
+    <div class="postdate">
+      
+        <time datetime="2025-12-02T15:23:16.000Z" class="dt-published" itemprop="datePublished">2025-12-02</time>
+        
+      
+    </div>
+
+
+      
+
+      
+    <div class="article-tag">
+        <i class="fa-solid fa-tag"></i>
+        <a class="p-category" href="/tags/fastjson/" rel="tag">fastjson</a>, <a class="p-category" href="/tags/%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/" rel="tag">反序列化</a>
+    </div>
+
+
+    </div>
+  </header>
+  
+
+  <div class="content e-content" itemprop="articleBody">
+    <h2 id="0-目标"><a href="#0-目标" class="headerlink" title="0.目标"></a>0.目标</h2><ul>
+<li>理解Fastjson的<strong>Autotype</strong>机制</li>
+<li>观察<code>@type</code>字段如何被Fastjson利用来加载并实例化<strong>任意指定类</strong>。</li>
+</ul>
+<h2 id="1-代码"><a href="#1-代码" class="headerlink" title="1.代码"></a>1.代码</h2><p>为了掩饰<code>@type</code>的作用，我们需要一个接口和它的实现类。</p>
+<h3 id="接口定义（Animal-java）"><a href="#接口定义（Animal-java）" class="headerlink" title="接口定义（Animal.java）"></a>接口定义（Animal.java）</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.zhuangjiewei.two;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">interface</span> <span class="title class_">Animal</span> &#123;</span><br><span class="line">    <span class="keyword">void</span> <span class="title function_">say</span><span class="params">()</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="实现类（Cat-java）"><a href="#实现类（Cat-java）" class="headerlink" title="实现类（Cat.java）"></a>实现类（Cat.java）</h3><p>在构造方法和Setter里面添加打印语句，方便观察。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.zhuangjiewei.two;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Cat</span> <span class="keyword">implements</span> <span class="title class_">Animal</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> String name;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 核心观察点 1：构造方法</span></span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">Cat</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;[Cat] 无参构造方法被调用 - Cat 对象正在创建...&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">say</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;喵喵喵，我是 &quot;</span> + name);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 核心观察点 2：Setter 方法</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">setName</span><span class="params">(String name)</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;[Cat] setName() 被调用，设置 name = &quot;</span> + name);</span><br><span class="line">        <span class="built_in">this</span>.name = name;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> String <span class="title function_">getName</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> name;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="主程序（Main-java）"><a href="#主程序（Main-java）" class="headerlink" title="主程序（Main.java）"></a>主程序（Main.java）</h3><p>在序列化时添加<code>SerializerFeature.WriteClassName</code>参数，强制Fastjson将类名写入JSON字符串中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.zhuangjiewei.two;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.alibaba.fastjson.JSON;</span><br><span class="line"><span class="keyword">import</span> com.alibaba.fastjson.serializer.SerializerFeature;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Main</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line">        <span class="comment">// ==========================================</span></span><br><span class="line">        <span class="comment">// 实验 A：序列化 - 观察如何生成 @type</span></span><br><span class="line">        <span class="comment">// ==========================================</span></span><br><span class="line">        System.out.println(<span class="string">&quot;--- 实验 A：序列化，生成 @type ---&quot;</span>);</span><br><span class="line"></span><br><span class="line">        <span class="type">Animal</span> <span class="variable">cat</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Cat</span>();</span><br><span class="line">        cat.say();</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 序列化时，我们将其视为 Animal 接口类型</span></span><br><span class="line">        <span class="comment">// 传入 SerializerFeature.WriteClassName 特性</span></span><br><span class="line">        <span class="comment">// 强制 Fastjson 将类名（即 @type）写入 JSON 字符串中</span></span><br><span class="line">        <span class="type">String</span> <span class="variable">jsonStringWithType</span> <span class="operator">=</span> JSON.toJSONString(cat, SerializerFeature.WriteClassName);</span><br><span class="line">        System.out.println(<span class="string">&quot;生成的 JSON 字符串:\n&quot;</span> + jsonStringWithType);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        System.out.println(<span class="string">&quot;\n==========================================\n&quot;</span>);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        <span class="comment">// ==========================================</span></span><br><span class="line">        <span class="comment">// 实验 B：反序列化 - 利用 @type 还原对象</span></span><br><span class="line">        <span class="comment">// ==========================================</span></span><br><span class="line">        System.out.println(<span class="string">&quot;--- 实验 B：反序列化，利用 @type 自动类型还原 ---&quot;</span>);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 重点：我们只使用 JSON.parse() 或 JSON.parse(json, Object.class)</span></span><br><span class="line">        <span class="comment">// Fastjson 会根据 JSON 里的 @type 字段来决定创建哪个类</span></span><br><span class="line">        <span class="type">Object</span> <span class="variable">obj</span> <span class="operator">=</span> JSON.parse(jsonStringWithType);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 验证：虽然我们用 Object 接收，但它确实是 Cat 类</span></span><br><span class="line">        <span class="keyword">if</span> (obj <span class="keyword">instanceof</span> Animal) &#123;</span><br><span class="line">            System.out.println(<span class="string">&quot;成功还原对象类型: &quot;</span> + obj.getClass().getName());</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 强制转换为 Animal 接口，并调用方法</span></span><br><span class="line">            <span class="type">Animal</span> <span class="variable">recoveredAnimal</span> <span class="operator">=</span> (Animal) obj;</span><br><span class="line">            recoveredAnimal.say();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="2-输出和观察"><a href="#2-输出和观察" class="headerlink" title="2.输出和观察"></a>2.输出和观察</h2><p>运行<code>Main.java</code>, 观察终端输出：</p>
+<img src="/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/2025-12-02-23-53-49.png" class="">
+
+<h3 id="观察点1：-序列化生成的JSON"><a href="#观察点1：-序列化生成的JSON" class="headerlink" title="观察点1： 序列化生成的JSON"></a>观察点1： 序列化生成的JSON</h3><p>在实验A中，可以看到生成的JSON字符串中有一个关键字段<code>@type</code>：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span><span class="attr">&quot;@type&quot;</span><span class="punctuation">:</span><span class="string">&quot;com.zhuangjiewei.two.Cat&quot;</span><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="观察点2-反序列化的执行流程"><a href="#观察点2-反序列化的执行流程" class="headerlink" title="观察点2: 反序列化的执行流程"></a>观察点2: 反序列化的执行流程</h3><p>在实验B中，当Fastjson看到<code>@type</code>时，会按序执行以下动作：</p>
+<ol>
+<li><strong>读取<code>@type</code>的值</strong>：<code>com.zhuangjiewei.two.Cat</code></li>
+<li><strong>加载类</strong>：通过反射加载<code>com.zhuangjiewei.two.Cat</code></li>
+<li><strong>实例化</strong>：无参构造函数被调用。</li>
+<li><strong>属性赋值</strong>：属性对应的Setter被调用。</li>
+</ol>
+<h2 id="3-总结"><a href="#3-总结" class="headerlink" title="3.总结"></a>3.总结</h2><p>Fastjson的AutoType机制提供了这样一种能力：</p>
+<blockquote>
+<p>根据用户在 JSON 字符串中提供的任意类名（通过 <code>@type</code> 字段），通过反射机制，自动去加载并实例化该类，并调用该类的 Setter 方法进行赋值。</p>
+</blockquote>
+<p>这样就为漏洞形成提供了条件：</p>
+<blockquote>
+<p>如果用户将 <code>@type</code> 的值替换为一个 Java 标准库中存在的、在 Setter 方法中包含危险操作的类，那么在反序列化过程中，危险操作就会被自动触发！</p>
+</blockquote>
+
+  </div>
+</article>
+
+
+
+        
+          <div id="footer-post-container">
+  <div id="footer-post">
+
+    <div id="nav-footer" style="display: none">
+      <ul>
+        
+          <li><a href="/">Home</a></li>
+        
+          <li><a href="/about/">About</a></li>
+        
+          <li><a href="/archives/">Writing</a></li>
+        
+          <li><a target="_blank" rel="noopener" href="https://github.com/Jerry-zhuang">Projects</a></li>
+        
+      </ul>
+    </div>
+
+    
+    
+      <div id="toc-footer" style="display: none">
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0-%E7%9B%AE%E6%A0%87"><span class="toc-number">1.</span> <span class="toc-text">0.目标</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E4%BB%A3%E7%A0%81"><span class="toc-number">2.</span> <span class="toc-text">1.代码</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8E%A5%E5%8F%A3%E5%AE%9A%E4%B9%89%EF%BC%88Animal-java%EF%BC%89"><span class="toc-number">2.1.</span> <span class="toc-text">接口定义（Animal.java）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E7%B1%BB%EF%BC%88Cat-java%EF%BC%89"><span class="toc-number">2.2.</span> <span class="toc-text">实现类（Cat.java）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%BB%E7%A8%8B%E5%BA%8F%EF%BC%88Main-java%EF%BC%89"><span class="toc-number">2.3.</span> <span class="toc-text">主程序（Main.java）</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E8%BE%93%E5%87%BA%E5%92%8C%E8%A7%82%E5%AF%9F"><span class="toc-number">3.</span> <span class="toc-text">2.输出和观察</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A7%82%E5%AF%9F%E7%82%B91%EF%BC%9A-%E5%BA%8F%E5%88%97%E5%8C%96%E7%94%9F%E6%88%90%E7%9A%84JSON"><span class="toc-number">3.1.</span> <span class="toc-text">观察点1： 序列化生成的JSON</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A7%82%E5%AF%9F%E7%82%B92-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E7%9A%84%E6%89%A7%E8%A1%8C%E6%B5%81%E7%A8%8B"><span class="toc-number">3.2.</span> <span class="toc-text">观察点2: 反序列化的执行流程</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E6%80%BB%E7%BB%93"><span class="toc-number">4.</span> <span class="toc-text">3.总结</span></a></li></ol>
+      </div>
+    
+
+    <div id="share-footer" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=http://example.com/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/"><i class="fab fa-facebook fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=http://example.com/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/&text=【重学反序列化之fastjson】2、fastjson的@Type机制"><i class="fab fa-twitter fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=http://example.com/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/&title=【重学反序列化之fastjson】2、fastjson的@Type机制"><i class="fab fa-linkedin fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=http://example.com/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/&is_video=false&description=【重学反序列化之fastjson】2、fastjson的@Type机制"><i class="fab fa-pinterest fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=【重学反序列化之fastjson】2、fastjson的@Type机制&body=Check out this article: http://example.com/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/"><i class="fa-solid fa-envelope fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=http://example.com/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/&title=【重学反序列化之fastjson】2、fastjson的@Type机制"><i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=http://example.com/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/&title=【重学反序列化之fastjson】2、fastjson的@Type机制"><i class="fab fa-reddit fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=http://example.com/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/&title=【重学反序列化之fastjson】2、fastjson的@Type机制"><i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=http://example.com/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/&title=【重学反序列化之fastjson】2、fastjson的@Type机制"><i class="fab fa-digg fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=http://example.com/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/&name=【重学反序列化之fastjson】2、fastjson的@Type机制&description="><i class="fab fa-tumblr fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=http://example.com/2025/12/02/%E3%80%90%E9%87%8D%E5%AD%A6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B9%8Bfastjson%E3%80%912%E3%80%81fastjson%E7%9A%84-Type%E6%9C%BA%E5%88%B6/&t=【重学反序列化之fastjson】2、fastjson的@Type机制"><i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+
+    <div id="actions-footer">
+        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;"><i class="fa-solid fa-bars fa-lg" aria-hidden="true"></i> Menu</a>
+        
+          <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;"><i class="fa-solid fa-list fa-lg" aria-hidden="true"></i> TOC</a>
+        
+        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;"><i class="fa-solid fa-share-alt fa-lg" aria-hidden="true"></i> Share</a>
+        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up fa-lg" aria-hidden="true"></i> Top</a>
+    </div>
+
+  </div>
+</div>
+
+        
+        <footer id="footer">
+  <div class="footer-left">
+    Copyright &copy;
+    
+    
+    2016-2025
+    庄杰伟
+  </div>
+  <div class="footer-right">
+    <nav>
+      <ul>
+        <!--
+       --><li><a href="/">Home</a></li><!--
+     --><!--
+       --><li><a href="/about/">About</a></li><!--
+     --><!--
+       --><li><a href="/archives/">Writing</a></li><!--
+     --><!--
+       --><li><a target="_blank" rel="noopener" href="https://github.com/Jerry-zhuang">Projects</a></li><!--
+     -->
+      </ul>
+    </nav>
+  </div>
+</footer>
+
+    </div>
+    <!-- styles -->
+
+
+
+  <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" onload="this.onload=null;this.rel='stylesheet'"/>
+
+
+    <!-- jquery -->
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" crossorigin="anonymous"></script>
+
+
+
+
+<!-- clipboard -->
+
+  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.7/clipboard.min.js" crossorigin="anonymous"></script>
+  
+  <script type="text/javascript">
+  $(function() {
+    // copy-btn HTML
+    var btn = "<span class=\"btn-copy tooltipped tooltipped-sw\" aria-label=\"Copy to clipboard!\">";
+    btn += '<i class="fa-regular fa-clone"></i>';
+    btn += '</span>';
+    // mount it!
+    $(".highlight table").before(btn);
+    var clip = new ClipboardJS('.btn-copy', {
+      text: function(trigger) {
+        return Array.from(trigger.nextElementSibling.querySelectorAll('.code')).reduce((str,it)=>str+it.innerText+'\n','')
+      }
+    });
+    clip.on('success', function(e) {
+      e.trigger.setAttribute('aria-label', "Copied!");
+      e.clearSelection();
+    })
+  })
+  </script>
+
+
+<script src="/js/main.js"></script>
+
+<!-- search -->
+
+<!-- Baidu Analytics -->
+
+<!-- Cloudflare Analytics -->
+
+<!-- Disqus Comments -->
+
+<!-- utterances Comments -->
+
+</body>
+</html>
